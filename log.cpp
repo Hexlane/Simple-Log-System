@@ -1,54 +1,27 @@
-#define _CRT_SECURE_NO_WARNINGS
 #include "log.hpp"
 
+static Logger* loggerInstance = nullptr;
 
-using namespace std::chrono_literals;
-namespace base {
+Logger* Logger::Instance() {
+    if (!loggerInstance) {
+        loggerInstance = new Logger();
+    }
 
-	void log::attach() {
-		init_console_handles();
-		init_files_handles();
-		g_log.send("Log", "Attached");
-	}
+    return loggerInstance;
+}
 
-	void log::detach() {
-		g_log.send("Log", "Detached");
-		free_console_handles();
-		free_file_handles();
-	}
+void Logger::Initialize() {
+    AllocConsole();
+    SetConsoleTitleA("Base");
+    SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_BLUE | FOREGROUND_INTENSITY);
 
-	void log::init_console_handles() {
-		AttachConsole(GetCurrentProcessId());
-		AllocConsole();
-		SetConsoleTitleA("Base");
-		freopen_s((FILE**)stdout, "CONOUT$", "w", stdout);
-		SetConsoleCP(CP_UTF8);
-		SetConsoleOutputCP(CP_UTF8);
-		std::this_thread::sleep_for(40ms);
-		m_console_hwnd = FindWindowA(NULL, "Base");
-		SetLayeredWindowAttributes(m_console_hwnd, NULL, 200, LWA_ALPHA);
-		SetWindowPos(m_console_hwnd, m_console_hwnd, 0, 0, 600, 480, SWP_FRAMECHANGED | WS_VISIBLE);
-	}
-	void log::init_files_handles() {
-		m_console.open("CONOUT$");
-		try {
-		}
-		catch (std::filesystem::filesystem_error const& err) {
-			g_log.send("std::filesystem error %s\n", err.what());
-		}
-		m_file.open(m_path, std::ios_base::out | std::ios_base::app);
-		m_file.clear();
-	}
+    FILE* dummyFile;
+    freopen_s(&dummyFile, "CONOUT$", "w", stdout);
+}
 
-	void log::free_console_handles() {
-		fclose(stdout);
-		FreeConsole();
-	}
-	
-	void log::free_file_handles() {
-		m_console.clear();
-		m_path.clear();
-		m_console.close();
-		m_file.close();
-	}
+void Logger::Uninitialize() {
+    FreeConsole();
+
+    loggerInstance = nullptr;
+    delete this;
 }
